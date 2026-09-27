@@ -17,11 +17,10 @@
 #endif
 
 #ifdef _LINUX
-#if (G_BYTE_ORDER == G_LITTLE_ENDIAN)
-#define _littleEndian
-#endif
-#if (G_BYTE_ORDER == G_BIG_ENDIAN)
+#if defined(__BYTE_ORDER__) && (__BYTE_ORDER__ == __ORDER_BIG_ENDIAN__)
 #define _bigEndian
+#else
+#define _littleEndian
 #endif
 #endif
 
@@ -50,30 +49,33 @@ typedef unsigned int bool32;
 typedef unsigned _int16 HTIMER; // A handle to a timer entry;
 #else
 #ifdef _LINUX
-typedef guint32 HWND;
+typedef uint32_t HWND;
 typedef void *HDC;      // I might change this later...
 typedef signed char i8; // signed 8-bit integer
 typedef unsigned char ui8;
-typedef gint16 i16; // signed 16-bit integer
-typedef guint16 ui16;
-typedef gint32 i32; // signed 32-bit integer
-typedef guint32 ui32;
-typedef gint64 i64; // signed 64-bit integer
+typedef int16_t i16; // signed 16-bit integer
+typedef uint16_t ui16;
+typedef int32_t i32; // signed 32-bit integer
+typedef uint32_t ui32;
+typedef int64_t i64; // signed 64-bit integer
 typedef i8 *pnt;
 typedef ui8 *upnt;
-typedef guint64 ui64;
-typedef guint32 bool32;
-typedef guint16 HTIMER;
+typedef uint64_t ui64;
+typedef uint32_t bool32;
+typedef uint16_t HTIMER;
+typedef uint8_t BYTE;
+typedef uint16_t WORD;
+typedef uint32_t DWORD;
 typedef struct
 {
    i32 x;
    i32 y;
 } POINT;
-typedef struct
+typedef struct // Same member order as the Win32 RECT so aggregate initializers match
 {
-   i32 right;
    i32 left;
    i32 top;
+   i32 right;
    i32 bottom;
 } RECT;
 #else

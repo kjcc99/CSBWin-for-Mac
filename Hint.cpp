@@ -237,8 +237,11 @@ struct F
    i16 Word16914;
    i16 Word16912;
    i16 Word16910;
-   i8 Byte16896[1];
-   HINTFILL(16895, 16888)
+   union
+   { // Holds a DATINDEX, which is larger than the original 8 bytes on 64-bit systems
+      i8 Byte16896[16896 - 16888];
+      DATINDEX datIndex16896;
+   };
    // i32   VBLCnt16888; // (use VBLCount)
    i16 Segment1_16872[50]; // First segment of HCBS
    // i32   Long16864; // part of Segment1_16872
@@ -858,7 +861,7 @@ FILE_DESCRIPTOR *FindFileDescriptor(i32 FDnum)
    }
    A4 = (FILE_DESCRIPTOR *)LoadPnt(f.Pointer15080);
    // A4 += 124 * FDnum;
-   ASSERT(sizeof(*A4) == 124, "A4");
+   ASSERT(sizeof(*A4) == 124 || sizeof(void *) != 4, "A4");
    A4 += FDnum;
    // if (wordGear(A4+4) == 0)
    if(A4->word4 == 0)
@@ -1287,7 +1290,7 @@ void TAG000f50(i16 P1)
    D7W = P1;
    pnt_4 = NULL;
    D0L = (UI16)(D7W);
-   D0L = 124 * D0L;
+   D0L = sizeof(FILE_DESCRIPTOR) * D0L;
    A3 = TAG00419a(D0L, 1025);
    if(A3 == NULL)
    {
@@ -1998,7 +2001,7 @@ void TAG001afe(i32 P1, i32 P2, i32 P3)
          continue;
       if((*pA4)[1] & 1)
          continue;
-      D4W = TAG001a9e((pnt)LoadPnt((*pA4) + 2),
+      D4W = TAG001a9e((pnt)((CLICKMAP *)*pA4)->pt12_2,
                       D7W,
                       D6W,
                       (UI16)P3);
@@ -2085,7 +2088,7 @@ void TAG001c0c(i32 P1)
          A0 = *pA4;
          if(wordGear(A0) & 1)
             continue;
-         A3 = (aReg)LoadPnt(A0 + 6);
+         A3 = (aReg)((CLICKMAP *)A0)->pPnt6;
          if(A3 == NULL)
             continue;
          for(; (D4W = (UI8)(*A3)) != 0; A3 += 4)
@@ -2203,7 +2206,7 @@ RESTARTABLE _TAG001dde(S6 *P1)
       D7W = D0W;
       A0 = pointer14130[D0W];
       s6A4->b1 = *A0;
-      A3 = (aReg)LoadPnt(A0 + 10);
+      A3 = (aReg)((CLICKMAP *)A0)->p10;
       if(A3 != NULL)
       {
          NotImpMsg(0x1ea0); //(*A3)(A4);
@@ -2410,9 +2413,9 @@ i32 TAG002c5e(const char *P1, pnt P2, pnt P3)
       }
       else
       {
-         StorePnt(A4 + 4, AssignMemory(17, 4 * (w_2 + 1)));
+         ((DATINDEX *)A4)->fileOffsets4 = (i32 *)AssignMemory(17, 4 * (w_2 + 1));
          SetBufferLength(wordGear(A4), 2 * w_2);
-         SetBufferAddress(wordGear(A4), (pnt)LoadPnt(A4 + 4));
+         SetBufferAddress(wordGear(A4), (pnt)((DATINDEX *)A4)->fileOffsets4);
          i_18 = ReadFile(wordGear(A4)); // read 4 words
          if(i_18 != 0)
          {
@@ -2421,12 +2424,12 @@ i32 TAG002c5e(const char *P1, pnt P2, pnt P3)
          else
          {
             wordGear(A4 + 2) = sw(w_2 - 1);
-            A3 = (aReg)LoadPnt(A4 + 4); // the 4 words we just read
+            A3 = (aReg)((DATINDEX *)A4)->fileOffsets4; // the 4 words we just read
             if(P3 != 0)
             {
 
                StorePnt(P3, AssignMemory(14, 2 * (w_2 + 1)));
-               MemoryMove(LoadPnt(A4 + 4),
+               MemoryMove((ui8 *)((DATINDEX *)A4)->fileOffsets4,
                           LoadPnt(P3),
                           1024,
                           1024,
@@ -2435,7 +2438,7 @@ i32 TAG002c5e(const char *P1, pnt P2, pnt P3)
             for(D7W = sw(w_2 - 1); D7W >= 0; D7W--)
             {
                A0 = A3 + 2 * D7W;
-               A1 = (aReg)LoadPnt(A4 + 4) + 4 * D7W;
+               A1 = (aReg)((DATINDEX *)A4)->fileOffsets4 + 4 * D7W;
                StoreLong(A1, LE16(wordGear(A0)));
                //
                //
@@ -2443,7 +2446,7 @@ i32 TAG002c5e(const char *P1, pnt P2, pnt P3)
             i_6 = 4 * w_2 + 2; // Offset of first segment
             for(D7L = 0; D7W <= w_2; D7W++)
             {
-               A0 = (aReg)LoadPnt(A4 + 4) + 4 * D7W;
+               A0 = (aReg)((DATINDEX *)A4)->fileOffsets4 + 4 * D7W;
                i_10 = LoadLong(A0);
                // A0 = LoadPnt(A4+4) + 4*D7W;
                StoreLong(A0, i_6); // file offset of each of 4 segments
@@ -3657,7 +3660,7 @@ pnt TAG004a22_14(i16 P1)
    pnt p_4;
    //;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
    // TAG009a02(9, P2);
-   p_4 = AssignMemory(P1, 22);
+   p_4 = AssignMemory(P1, sizeof(TEXT));
    wordGear(p_4) = 3;
    // TAG009a1c(9, P2);
    return p_4;
@@ -7304,7 +7307,7 @@ i32 TAG00948c(i16 P1)
 { //(i32)
    BOOK *pBook_4;
    //;;;;;;;;;;;;;;;;;;;;;;;;;
-   pBook_4 = (BOOK *)AssignMemory(P1, 10);
+   pBook_4 = (BOOK *)AssignMemory(P1, sizeof(BOOK));
    if(pBook_4 != NULL)
    {
       pBook_4->w0 = 0;        // #pages?
@@ -7323,7 +7326,7 @@ pnt TAG0094de(i16 P1, PAGE *P2, NODE *P3)
 { //(pnt)
    NODE *pNode_4;
    //;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-   pNode_4 = (NODE *)AssignMemory(P1, 8);
+   pNode_4 = (NODE *)AssignMemory(P1, sizeof(NODE));
    if(pNode_4 != NULL)
    {
       pNode_4->pPage0 = P2;
@@ -7562,7 +7565,7 @@ void TAG00978a_27(i16 P1, i32 nP2, pnt nP3, i32 nP4)
    // TAG009a02(13, P2);
    {
       PAGE *pPage_8;
-      pPage_8 = (PAGE *)AssignMemory(P1, 16);
+      pPage_8 = (PAGE *)AssignMemory(P1, sizeof(PAGE));
       pPage_8->w0 = 8;
       pPage_8->i4 = nP2;
       pPage_8->pText8 = pTextP4;

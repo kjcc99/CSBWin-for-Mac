@@ -21,6 +21,7 @@
 #pragma warning(disable : 4996) // sprintf, etc deprecated
 #include <d2d1_1.h>
 
+#include <stdint.h>
 #include <limits>
 #include <type_traits>
 #include <memory>
@@ -28,6 +29,7 @@
 #include <unordered_map>
 #include <algorithm>
 #include <string>
+#include <vector>
 #endif
 
 // C RunTime Header Files
@@ -39,14 +41,28 @@
 #else
 #ifdef _LINUX
 #include <SDL.h>
+#include <stdint.h>
 #include <stdlib.h>
 #include <stdio.h>
+#include <string.h>
 #include <memory.h>
-#include <glib.h>
 #include <sys/stat.h>
-#ifdef USE_OLD_GTK
-#include <gtk/gtk.h>
-#endif
+#include <limits>
+#include <type_traits>
+#include <memory>
+#include <array>
+#include <unordered_map>
+#include <algorithm>
+#include <string>
+#include <vector>
+// Apple's SDK defines TARGET_OS_MAC; in this codebase that macro selects the
+// long-dead Mac OS Classic (CodeWarrior) port, so hide it from the game code.
+#undef TARGET_OS_MAC
+#define MAX_PATH 1024
+#define _strupr(X) SDL_strupr(X)
+#define _stricmp(A, B) SDL_strcasecmp(A, B)
+#define _strnicmp(A, B, N) SDL_strncasecmp(A, B, N)
+#define __fallthrough
 #else
 #include <stdlib.h>
 #include <stdio.h>
@@ -151,11 +167,13 @@ struct CntPtrTo
       return *this;
    }
 
+#ifdef _MSVC_INTEL
    HRESULT CoCreateInstance(const CLSID &clsid, DWORD clsctx)
    {
       Assert(!m_p);
       return ::CoCreateInstance(clsid, nullptr, clsctx, __uuidof(T), IID_PPV_ARGS_Helper(&m_p));
    }
+#endif
 
 private:
    T *m_p{};

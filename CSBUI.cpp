@@ -699,7 +699,7 @@ const char *SmartDiscards[] = {
 */
 
 // ROQUEN: humm...
-#if !defined(_LINUX) // 008
+#if !defined(_LINUX) || defined(SDL20) // 008
 #define CONFIG_NAME "config.txt"
 #else
 #define CONFIG_NAME "config.linux"
@@ -1380,8 +1380,9 @@ void UI_Sleep(i32 milliseconds)
 #ifdef TARGET_OS_MAC       // 016
    Sleep(milliseconds);
 #endif      // 016
-#ifdef xxxx // 017
-   xxx usleep(milliseconds * 1000);
+#ifdef SDL20 // 017
+   if(!NoSleep)
+      SDL_Delay(milliseconds);
 #endif // 017
 }
 
@@ -1876,7 +1877,13 @@ void UI_GetCursorPos(i32 *x, i32 *y)
 #endif // 029
 #endif // 028
 
-#ifndef _LINUX // 030
+#if !defined(_LINUX) || defined(SDL20) // 030
+
+#ifdef _MSVC_INTEL
+#define PATH_SEPARATOR '\\'
+#else
+#define PATH_SEPARATOR '/'
+#endif
 
 bool UI_ProcessOption(char *key, char *value)
 {
@@ -1888,10 +1895,10 @@ bool UI_ProcessOption(char *key, char *value)
       if(g_folderName != NULL)
       {
          strcpy(g_folderName, value);
-         if(g_folderName[strlen(g_folderName) - 1] != '\\')
+         if(g_folderName[strlen(g_folderName) - 1] != PATH_SEPARATOR)
          {
             g_folderName[strlen(g_folderName) + 1] = 0;
-            g_folderName[strlen(g_folderName)] = '\\';
+            g_folderName[strlen(g_folderName)] = PATH_SEPARATOR;
          }
          g_folderParentName = parentFolder(g_folderName, g_folderName + strlen(g_folderName));
       }
@@ -2328,7 +2335,7 @@ void UI_CheckMemoryLeaks()
    };
 }
 
-#if !defined(_LINUX) // 043
+#if !defined(_LINUX) || defined(SDL20) // 043
 
 LISTING::LISTING()
 {

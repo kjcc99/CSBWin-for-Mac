@@ -16,7 +16,7 @@
 #define MAXWAVE 1
 #else
 
-#if defined _LINUX
+#if defined _LINUX && !defined SDL20
 #define MAXWAVE 1
 #else
 #define MAXWAVE 3

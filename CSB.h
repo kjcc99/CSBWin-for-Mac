@@ -786,6 +786,21 @@ struct SUMMARIZEROOMDATA
 #define SETWBITS15_15(d, s) (d) = (i16)(((d) & 0x7fff) | (((s) & 0x0001) << 15))
 #define SETIBITS24_35(d, s) (d) = (i32)(((d) & 0xffffff) | (((s) & 0xff) << 24))
 
+class DB0;
+class DB1;
+class DB2;
+class DB3;
+class DB4;
+class DB5;
+class DB6;
+class DB7;
+class DB8;
+class DB9;
+class DB10;
+class DB11;
+struct DB14;
+struct DB15;
+
 class DBCOMMON
 {
    friend class DB0;

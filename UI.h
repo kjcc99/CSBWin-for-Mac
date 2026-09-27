@@ -138,7 +138,7 @@ void UI_SetDIBitsToDevice(
     char *,
     void *, // BITMAPINFO *,
     i32);
-#ifdef _LINUX
+#if defined(_LINUX) && !defined(SDL20)
 bool UI_ProcessOption(char **argv, i32 &argc);
 #else
 bool UI_ProcessOption(char *key, char *value);

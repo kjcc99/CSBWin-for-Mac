@@ -2546,7 +2546,7 @@ void DrawCursor() // called by VBL handler
          D0W = sw(D0W - D3W); // reduce height to fit
       }
    }
-   D2L = (i32)A2;
+   D2L = (i32)(intptr_t)A2;
    SWAP(D2);
    if(D2W != 0) // if left of screen
    {
@@ -2603,7 +2603,7 @@ tag002e42:
    D7W = D0W;
 
 tag002e5a:
-   switch((i32)A2)
+   switch((i32)(intptr_t)A2)
    {
       case 0x002e5c: goto tag002e5c;
       case 0x002e86: goto tag002e86;
@@ -9611,7 +9611,7 @@ RESTARTABLE _DisplayChaosStrikesBack()
    if(d.iAvailableMemory < 138060)
       RETURN;
    pGraphic = (ui8 *)allocateMemory(133056, 0);            // Temporary allocation
-   pGraphic = (ui8 *)((UINT_PTR)(pGraphic + 256) & ~0xFF); // Round to 256-byte boundary
+   pGraphic = (ui8 *)((uintptr_t)(pGraphic + 256) & ~0xFF); // Round to 256-byte boundary
    // We have 132800 bytes remaining after rounding.
    A3 = (aReg)pGraphic;
 #ifdef GraphicsDebug

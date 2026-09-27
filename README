@@ -1,3 +1,32 @@
+macOS (SDL2 build):
+	Install the tools with Homebrew, then build with CMake:
+
+		brew install sdl2 cmake
+		cmake -S . -B build
+		cmake --build build
+
+	The build places the CSBwin program in the Game folder, next to
+	the game data. Double-click one of the .command files there
+	("Play DM.command", "Play CSB.command", ...) or run it directly:
+
+		cd Game
+		./CSBwin directory=DM
+
+	The command line options are the same as on Windows
+	(directory=, dungeon=, play=, speed=, size=full, record, ...).
+
+	Keyboard shortcuts:
+		Cmd+F or F11	toggle fullscreen
+		Cmd+A		toggle 4x3 aspect ratio
+		Cmd+1 .. Cmd+7	game speed (Glacial .. Quick as a Bunny)
+		Cmd+E		toggle extra ticks
+		Cmd+I		statistics
+		Cmd+/		help
+		Cmd+Q		quit
+	Ctrl-click acts as a right click.
+
+	The platform code lives in sdl/ (window, input, sound and dialogs).
+
 Linux:
 	You will need to have Gnome and SDL properly
 	installed on your system. If your SDL has been

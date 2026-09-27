@@ -13,17 +13,18 @@
 #include <SYS\STAT.h>
 #endif
 
+#ifdef _MSVC_INTEL
 extern CntPtrTo<ID2D1Factory> g_pID2D1Factory;
 extern CntPtrTo<ID2D1HwndRenderTarget> g_pID2DRenderTarget;
 extern CntPtrTo<ID2D1Bitmap> g_pID2DBitmap;
+#else
+void PresentScreen(const ui32 *bitmap); // sdl/SDLMain.cpp
+#endif
 
 #ifdef _LINUX
 #pragma pack(1)
 
-#define DWORD unsigned int
 #define LONG int
-#define WORD unsigned short int
-#define BYTE unsigned char
 
 #define BI_RGB 0
 #define DIB_RGB_COLORS 0
@@ -614,12 +615,16 @@ void display()
 
          if(areaChangedCount)
          {
+#ifndef _MSVC_INTEL
+            PresentScreen(g_bitmap);
+#else
             g_pID2DRenderTarget->BeginDraw();
             auto rect = D2D1_RECT_U{0, 0, uint32_t(g_rcAtari.right), uint32_t(g_rcAtari.bottom)};
             g_pID2DBitmap->CopyFromMemory(&rect, g_bitmap, sizeof(DWORD) * g_rcAtari.right);
 
             g_pID2DRenderTarget->DrawBitmap(g_pID2DBitmap, D2D1_RECT_F{float(g_rcClient.left), float(g_rcClient.top), float(g_rcClient.right), float(g_rcClient.bottom)}, 1.0f, D2D1_BITMAP_INTERPOLATION_MODE_NEAREST_NEIGHBOR);
             g_pID2DRenderTarget->EndDraw();
+#endif
          }
       }
       else

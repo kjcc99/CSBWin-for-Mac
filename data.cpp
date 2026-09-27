@@ -1369,7 +1369,7 @@ void DB4::groupIndex(ui32 i)
 {
    if(TimerTraceActive)
    {
-      if((i32)this == 0x87e03c)
+      if((i32)(intptr_t)this == 0x87e03c)
       {
          fprintf(GETFILE(TraceFile), "Set 105f groupIndex to %02x\n", i);
       }

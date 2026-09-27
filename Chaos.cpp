@@ -228,7 +228,13 @@ struct E
    pnt Pnt430;
    i16 Word426;
    i16 Word424;
+#if UINTPTR_MAX > 0xffffffffu
+   // pDBank422..Byte412 is an 18-byte 68000-style descriptor addressed with
+   // 32-bit offsets, so the pointer is kept as a 32-bit handle (see StorePnt).
+   ui32 pDBank422;
+#else
    pnt pDBank422;
+#endif
    i16 Word418;
    i32 DBankLen416;
    i8 Byte412[8];
@@ -630,6 +636,84 @@ void MemoryMove(ui8 *, ui8 *, i16, i16, i32); // like MemMove
 i32 TAG008788(i16, i32, ui32);
 void EditCharacterName(char key);
 
+#if UINTPTR_MAX > 0xffffffffu
+// On 64-bit platforms a pointer does not fit in the 4-byte slots that this
+// 68000-derived code uses inside its emulated memory images.  Pointers stored
+// into such slots are replaced by a 32-bit handle into this table (0 == NULL).
+// Slots that are genuine pointer fields of 'e' hold the full pointer.
+static std::vector<void *> g_pointerHandles{nullptr};
+static std::unordered_map<void *, ui32> g_pointerHandleIndex;
+
+// True if addr is one of the pointer-typed members of 'e'.  Everything else
+// (byte arrays inside 'e' and allocated memory) is 68000-style storage.
+static bool IsRealPointerSlot(const void *addr)
+{
+   auto isField = [addr](const void *field, size_t size) {
+      const ui8 *p = (const ui8 *)addr;
+      const ui8 *f = (const ui8 *)field;
+      return p >= f && p < f + size && (p - f) % sizeof(void *) == 0;
+   };
+   return isField(&e.Pnt24812, sizeof(e.Pnt24812)) ||
+          isField(&e.Pnt24792, sizeof(e.Pnt24792)) ||
+          isField(e.Pnt24296, sizeof(e.Pnt24296)) ||
+          isField(e.Pnt23896, sizeof(e.Pnt23896)) ||
+          isField(&e.Pnt8064, sizeof(e.Pnt8064)) ||
+          isField(&e.Pnt8060, sizeof(e.Pnt8060)) ||
+          isField(&e.PhysicalBase, sizeof(e.PhysicalBase)) ||
+          isField(e.Pnt714, sizeof(e.Pnt714)) ||
+          isField(&e.pw664, sizeof(e.pw664)) ||
+          isField(&e.Pnt660, sizeof(e.Pnt660)) ||
+          isField(&e.pw656, sizeof(e.pw656)) ||
+          isField(&e.pw652, sizeof(e.pw652)) ||
+          isField(&e.pAllocDBank434, sizeof(e.pAllocDBank434)) ||
+          isField(&e.Pnt430, sizeof(e.Pnt430));
+}
+
+static ui32 PointerToHandle(void *p)
+{
+   if(p == nullptr)
+      return 0;
+   auto it = g_pointerHandleIndex.find(p);
+   if(it != g_pointerHandleIndex.end())
+      return it->second;
+   ui32 handle = ui32(g_pointerHandles.size());
+   g_pointerHandles.push_back(p);
+   g_pointerHandleIndex[p] = handle;
+   return handle;
+}
+
+static void *HandleToPointer(ui32 handle)
+{
+   if(handle >= g_pointerHandles.size())
+      return nullptr;
+   return g_pointerHandles[handle];
+}
+
+static void StorePointerSlot(void *addr, void *data)
+{
+   if(IsRealPointerSlot(addr))
+   {
+      memcpy(addr, &data, sizeof(data));
+      return;
+   }
+   ui32 handle = PointerToHandle(data);
+   memcpy(addr, &handle, sizeof(handle));
+}
+
+static void *LoadPointerSlot(const void *addr)
+{
+   if(IsRealPointerSlot(addr))
+   {
+      void *p;
+      memcpy(&p, addr, sizeof(p));
+      return p;
+   }
+   ui32 handle;
+   memcpy(&handle, addr, sizeof(handle));
+   return HandleToPointer(handle);
+}
+#endif
+
 void StorePnt(ui8 *addr, ui8 *data)
 {
    // A little explanation is in order here, perhaps.
@@ -639,6 +723,8 @@ void StorePnt(ui8 *addr, ui8 *data)
    // fetch and store them by referencing two 16-bit words.
 #ifdef _bigEndian
    xxxxx
+#elif UINTPTR_MAX > 0xffffffffu
+   StorePointerSlot(addr, data);
 #else
    *((ui16 *)(addr)) = (ui16)((ui32)data);
    *((ui16 *)(addr + 2)) = (ui16)(((ui32)data) >> 16);
@@ -663,6 +749,8 @@ ui8 *LoadPnt(ui8 *addr)
    // fetch and store them by referencing two 16-bit words.
 #ifdef _bigEndian
    xxxxx
+#elif UINTPTR_MAX > 0xffffffffu
+   return (ui8 *)LoadPointerSlot(addr);
 #else
    return (ui8 *)((*(ui16 *)(addr)) | ((ui32)((*(ui16 *)(addr + 2))) << 16));
 #endif
@@ -720,6 +808,8 @@ void StorePnt(ui8 *addr, aReg data)
    // fetch and store them by referencing two 16-bit words.
 #ifdef _bigEndian
    xxxxx
+#elif UINTPTR_MAX > 0xffffffffu
+   StorePointerSlot(addr, data);
 #else
    *((ui16 *)((pnt)addr)) = (ui16)((ui32)data);
    *((ui16 *)((pnt)addr + 2)) = (ui16)(((ui32)data) >> 16);
@@ -735,6 +825,8 @@ void Storepi16(i16 **addr, i16 *data)
    // fetch and store them by referencing two 16-bit words.
 #ifdef _bigEndian
    xxxxx
+#elif UINTPTR_MAX > 0xffffffffu
+   StorePointerSlot(addr, data);
 #else
    *((ui16 *)((pnt)addr)) = (ui16)((ui32)data);
    *((ui16 *)((pnt)addr + 2)) = (ui16)(((ui32)data) >> 16);
@@ -750,6 +842,8 @@ i16 *Loadpi16(i16 **addr)
    // fetch and store them by referencing two 16-bit words.
 #ifdef _bigEndian
    xxxxx
+#elif UINTPTR_MAX > 0xffffffffu
+   return (i16 *)LoadPointerSlot(addr);
 #else
    return (i16 *)((*(ui16 *)((pnt)addr)) | ((ui32)((*(ui16 *)((pnt)addr + 2))) << 16));
 #endif
@@ -991,7 +1085,7 @@ RESTARTABLE _UtilityDialogBox(const char *P1, const i32 p2, const char *p3, S124
    P2 = p2;
    P3 = p3;
    //;;;;;;;;;;;;;;;;;;;;
-   ClearMemory((ui8 *)pS12406_28, 24);
+   ClearMemory((ui8 *)pS12406_28, sizeof(pS12406_28));
    pS12406_28[0] = P4;
    D4W = uw(P2 & 0x8000);
    P2 &= 0x7fff;
@@ -4638,9 +4732,9 @@ void TAG005c92(char *P1)
 { // Splits an address into two words.
    dReg D0;
    //;;;;;;;;;;;;;;;;;;;;;;;;;;;
-   D0L = (i32)P1 >> 16;
+   D0L = (i32)(intptr_t)P1 >> 16;
    e.Word9108 = D0W;
-   e.Word9106 = (UI16)((i32)P1 & 0xffff);
+   e.Word9106 = (UI16)((i32)(intptr_t)P1 & 0xffff);
 }
 
 // *********************************************************
@@ -5558,7 +5652,7 @@ i32 TAG0080e0(ui8 *P1)
    A4 = (aReg)P1;
    if((A4 == NULL) || (LoadLong(A4) == 0))
    {
-      TAG008788(1, 0x010d0002, (ui32)A4);
+      TAG008788(1, 0x010d0002, (ui32)(uintptr_t)A4);
    }
    else
    {
