@@ -1,8 +1,18 @@
 cmake_minimum_required(VERSION 3.16)
-project(CSBwin CXX)
 
 # SDL2 build of CSBwin for macOS (and other POSIX systems).
 # The Windows build still uses CSBWin.sln.
+#
+# -DCSBWIN_APP=ON builds a self-contained CSBwin.app instead of a bare
+# executable: SDL2 is built from source and linked statically, so the app
+# runs on any Apple Silicon Mac with macOS 11 or later.
+option(CSBWIN_APP "Build a self-contained CSBwin.app (macOS)" OFF)
+if(CSBWIN_APP)
+   set(CMAKE_OSX_DEPLOYMENT_TARGET 11.0 CACHE STRING "")
+   set(CMAKE_OSX_ARCHITECTURES arm64 CACHE STRING "")
+endif()
+
+project(CSBwin C CXX)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -10,7 +20,21 @@ if(NOT CMAKE_BUILD_TYPE)
    set(CMAKE_BUILD_TYPE RelWithDebInfo)
 endif()
 
-find_package(SDL2 REQUIRED CONFIG)
+if(CSBWIN_APP)
+   include(FetchContent)
+   set(SDL_SHARED OFF CACHE BOOL "" FORCE)
+   set(SDL_STATIC ON CACHE BOOL "" FORCE)
+   set(SDL_TEST OFF CACHE BOOL "" FORCE)
+   FetchContent_Declare(SDL2
+      GIT_REPOSITORY https://github.com/libsdl-org/SDL.git
+      GIT_TAG release-2.32.10
+      GIT_SHALLOW TRUE)
+   FetchContent_MakeAvailable(SDL2)
+   set(SDL_LIBRARY SDL2::SDL2-static)
+else()
+   find_package(SDL2 REQUIRED CONFIG)
+   set(SDL_LIBRARY SDL2::SDL2)
+endif()
 
 set(GAME_SOURCES
    AsciiDump.cpp Attack.cpp Bitmaps.cpp Chaos.cpp Character.cpp
@@ -33,7 +57,7 @@ target_compile_definitions(CSBwin PRIVATE _LINUX SDL20)
 target_compile_options(CSBwin PRIVATE
    -fsigned-char
    -Wno-everything)
-target_link_libraries(CSBwin PRIVATE SDL2::SDL2)
+target_link_libraries(CSBwin PRIVATE ${SDL_LIBRARY})
 if(APPLE)
    # The game keeps #pragma pack(1) structs (inherited from the 68000 original)
    # containing statically initialized pointers at unaligned offsets.  arm64
@@ -41,7 +65,29 @@ if(APPLE)
    target_link_options(CSBwin PRIVATE -Wl,-no_fixup_chains)
 endif()
 
-# Like CSBwin.exe on Windows, the program looks for config.txt, hcsb.dat etc.
-# in its own folder, so place a copy next to the game data.
-add_custom_command(TARGET CSBwin POST_BUILD
-   COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:CSBwin> ${CMAKE_SOURCE_DIR}/Game/CSBwin)
+if(CSBWIN_APP)
+   # Only the game data that ships in the repository; saved games in the
+   # developer's Game folder stay out of the app.
+   set(GAME_DATA
+      config.txt hcsb.dat hcsb.hct mini.dat
+      DM/dungeon.dat DM/Dungeon-Kid.dat DM/graphics.dat DM/Playfile.replay
+      CSB/Dungeon.dat CSB/csbgame2.dat CSB/graphics.dat CSB/Playfile.replay)
+   foreach(file ${GAME_DATA})
+      get_filename_component(folder ${file} DIRECTORY)
+      set_source_files_properties(Game/${file} PROPERTIES MACOSX_PACKAGE_LOCATION Resources/${folder})
+      target_sources(CSBwin PRIVATE Game/${file})
+   endforeach()
+   set_source_files_properties(macos/CSBwin.icns PROPERTIES MACOSX_PACKAGE_LOCATION Resources)
+   target_sources(CSBwin PRIVATE macos/CSBwin.icns)
+   set_target_properties(CSBwin PROPERTIES
+      MACOSX_BUNDLE TRUE
+      MACOSX_BUNDLE_INFO_PLIST ${CMAKE_SOURCE_DIR}/macos/Info.plist.in)
+   # Apple Silicon refuses to run code without at least an ad-hoc signature.
+   add_custom_command(TARGET CSBwin POST_BUILD
+      COMMAND codesign --force --deep --sign - $<TARGET_BUNDLE_DIR:CSBwin>)
+else()
+   # Like CSBwin.exe on Windows, the program looks for config.txt, hcsb.dat etc.
+   # in its own folder, so place a copy next to the game data.
+   add_custom_command(TARGET CSBwin POST_BUILD
+      COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:CSBwin> ${CMAKE_SOURCE_DIR}/Game/CSBwin)
+endif()

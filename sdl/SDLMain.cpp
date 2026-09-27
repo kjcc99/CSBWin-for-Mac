@@ -8,6 +8,7 @@
 #include "CSB.h"
 #include "Data.h"
 #include "resource.h"
+#include <unistd.h>
 
 void display();
 void ForceScreenDraw();
@@ -436,6 +437,20 @@ int main(int argc, char *argv[])
    {
       g_root = basePath;
       SDL_free(basePath);
+   }
+   // Inside CSBwin.app the game data is in Contents/Resources, which may be
+   // read-only.  Saves and settings go in ~/Library/Application Support/CSBwin.
+   static const char bundleSuffix[] = ".app/Contents/Resources/";
+   if(g_root.size() > strlen(bundleSuffix) &&
+      g_root.compare(g_root.size() - strlen(bundleSuffix), std::string::npos, bundleSuffix) == 0)
+   {
+      if(char *prefPath = SDL_GetPrefPath("", "CSBwin"))
+      {
+         g_userRoot = prefPath;
+         SDL_free(prefPath);
+         chdir(g_userRoot.c_str()); // For the odd debug file opened with a bare name
+         UI_ProcessOption((char *)"DIRECTORY", (char *)"DM"); // Until the launcher picks a game
+      }
    }
    versionSignature = Signature(szCSBVersion);
    ProcessCommandLine(argc, argv);

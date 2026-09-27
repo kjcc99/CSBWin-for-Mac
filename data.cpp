@@ -35,6 +35,7 @@ i16 GraphicTraceFile = -1;
 char *g_folderName = NULL;
 std::string g_folderParentName;
 std::string g_root;
+std::string g_userRoot;
 VIDEOMODE videoMode;
 std::unique_ptr<ui8[]> g_tempBitmap;
 int g_tempBitmapSize = 0;

@@ -103,6 +103,7 @@ extern char *g_folderName;
 extern std::string g_folderParentName;
 // extern char *folderSavedGame;
 extern std::string g_root;
+extern std::string g_userRoot; // Writable folder searched before g_root (macOS .app)
 extern i32 *videoSegSize;
 extern i32 *videoSegSrcX;
 extern i32 *videoSegSrcY;
