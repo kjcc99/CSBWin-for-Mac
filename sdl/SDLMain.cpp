@@ -140,11 +140,19 @@ static bool IsInsideAtariScreen(POINT point)
    return point.x >= 0 && point.y >= 0 && point.x < g_rcAtari.right && point.y < g_rcAtari.bottom;
 }
 
-void UI_GetCursorPos(i32 *x, i32 *y)
+// The mouse position on the Atari screen.  Mouse events are not used for this
+// because sdl2-compat reports their coordinates in pixels on HiDPI displays,
+// while SDL_GetMouseState reports points.
+static POINT MouseToAtari()
 {
    int mouseX, mouseY;
    SDL_GetMouseState(&mouseX, &mouseY);
-   POINT point = WindowToAtari(mouseX, mouseY);
+   return WindowToAtari(mouseX, mouseY);
+}
+
+void UI_GetCursorPos(i32 *x, i32 *y)
+{
+   POINT point = MouseToAtari();
    *x = point.x;
    *y = point.y;
 }
@@ -359,12 +367,12 @@ static void HandleEvent(const SDL_Event &event)
          }
          break;
       case SDL_MOUSEMOTION:
-         ShowCursorIfNeeded(IsInsideAtariScreen(WindowToAtari(event.motion.x, event.motion.y)));
+         ShowCursorIfNeeded(IsInsideAtariScreen(MouseToAtari()));
          break;
       case SDL_MOUSEBUTTONDOWN:
       case SDL_MOUSEBUTTONUP: {
          bool down = event.type == SDL_MOUSEBUTTONDOWN;
-         POINT point = WindowToAtari(event.button.x, event.button.y);
+         POINT point = MouseToAtari();
          // Ctrl-click acts as a right click for one-button trackpads.
          bool right = event.button.button == SDL_BUTTON_RIGHT ||
                       (event.button.button == SDL_BUTTON_LEFT && (SDL_GetModState() & KMOD_CTRL));
