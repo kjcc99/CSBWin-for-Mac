@@ -306,6 +306,9 @@ RESTARTABLE _ShowCredits(const i32 P1) //()
                } while(intResult & 1);
             }
             Cleanup(false);
+            // Cleanup released the dungeon, so load the game as if starting
+            // fresh instead of reusing the dead party's buffers.
+            d.PartyHasDied = 0;
             if(recording)
             {
                UI_BeginRecordOK(true);
@@ -313,6 +316,8 @@ RESTARTABLE _ShowCredits(const i32 P1) //()
                RecordFile_Record(0x100, 0x54, 0xc9);
             }
             d.Initialize();
+            // Don't let the 'Restart' click select a file in the save game menu.
+            DiscardAllInput();
             GameSetup(_25_, 0);
             // STShowCursor(HC50);
             // STHideCursor(HC33);
