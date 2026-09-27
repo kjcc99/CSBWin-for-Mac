@@ -83,8 +83,10 @@ if(CSBWIN_APP)
       MACOSX_BUNDLE TRUE
       MACOSX_BUNDLE_INFO_PLIST ${CMAKE_SOURCE_DIR}/macos/Info.plist.in)
    # Apple Silicon refuses to run code without at least an ad-hoc signature.
-   add_custom_command(TARGET CSBwin POST_BUILD
-      COMMAND codesign --force --deep --sign - $<TARGET_BUNDLE_DIR:CSBwin>)
+   # Sign on every build, since changed resources are copied without relinking.
+   add_custom_target(sign_app ALL
+      COMMAND codesign --force --deep --sign - $<TARGET_BUNDLE_DIR:CSBwin>
+      DEPENDS CSBwin)
 else()
    # Like CSBwin.exe on Windows, the program looks for config.txt, hcsb.dat etc.
    # in its own folder, so place a copy next to the game data.
