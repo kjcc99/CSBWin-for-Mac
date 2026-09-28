@@ -9,6 +9,9 @@
 #include "Data.h"
 #include "resource.h"
 #include <unistd.h>
+#ifdef __APPLE__
+#include "MacMenu.h"
+#endif
 
 void display();
 void ForceScreenDraw();
@@ -22,6 +25,8 @@ extern bool PlayfileIsOpen();
 extern bool RecordMenuOption;
 extern i32 NoSpeedLimit;
 extern i32 GameMode;
+extern unsigned char *encipheredDataFile;
+extern bool simpleEncipher;
 extern RECT g_rcClient;
 
 i32 trace = -1;
@@ -299,6 +304,7 @@ static bool HandleShortcut(const SDL_KeyboardEvent &key)
    }
    if(!(key.keysym.mod & KMOD_GUI))
       return false;
+#ifndef __APPLE__
    switch(key.keysym.scancode)
    {
       case SDL_SCANCODE_F: ToggleFullscreen(); break;
@@ -316,8 +322,83 @@ static bool HandleShortcut(const SDL_KeyboardEvent &key)
       case SDL_SCANCODE_Q: g_quit = true; break;
       default: break;
    }
+#endif
+   // On the Mac these are the menus' key equivalents, which the menu bar handles.
    return true; // Never pass Cmd-combinations on to the game
 }
+
+#ifdef __APPLE__
+static bool ItemsRemainingAvailable()
+{
+   return ItemsRemainingOK && (encipheredDataFile == NULL) && !simpleEncipher;
+}
+
+// The same states as WM_INITMENUPOPUP in CSBwin.cpp.
+bool MacMenu_ItemState(int id, bool &checked)
+{
+   switch(id)
+   {
+      case IDC_ItemsRemaining:
+      case IDC_NonCSBItemsRemaining: return ItemsRemainingAvailable();
+      case IDM_DMRULES: checked = DM_rules; return true;
+      case IDC_Record: checked = RecordMenuOption; return BeginRecordOK;
+      case IDC_Playback: checked = PlayfileIsOpen(); return BeginRecordOK;
+      case IDC_QuickPlay: checked = NoSpeedLimit != 0; return PlayfileIsOpen();
+      case IDM_Glacial: checked = gameSpeed == SPEED_GLACIAL; return true;
+      case IDM_Molasses: checked = gameSpeed == SPEED_MOLASSES; return true;
+      case IDM_VerySlow: checked = gameSpeed == SPEED_VERYSLOW; return true;
+      case IDM_Slow: checked = gameSpeed == SPEED_SLOW; return true;
+      case IDM_Normal: checked = gameSpeed == SPEED_NORMAL; return true;
+      case IDM_Fast: checked = gameSpeed == SPEED_FAST; return true;
+      case IDM_Quick: checked = gameSpeed == SPEED_QUICK; return true;
+      case IDM_ExtraTicks: checked = extraTicks; return true;
+      case IDM_PlayerClock: checked = playerClock; return true;
+      case IDM_VOLUME_FULL: checked = gameVolume == VOLUME_FULL; return true;
+      case IDM_VOLUME_HALF: checked = gameVolume == VOLUME_HALF; return true;
+      case IDM_VOLUME_QUARTER: checked = gameVolume == VOLUME_QUARTER; return true;
+      case IDM_VOLUME_EIGHTH: checked = gameVolume == VOLUME_EIGHTH; return true;
+      case IDM_VOLUME_OFF: checked = gameVolume == VOLUME_OFF; return true;
+      case ID_4X3ASPECTRATIO: checked = g_aspectRatio.y == 240; return true;
+      case IDM_FULLSCREEN: checked = (SDL_GetWindowFlags(g_window) & SDL_WINDOW_FULLSCREEN_DESKTOP) != 0; return true;
+      default: return true;
+   }
+}
+
+// The same actions as WM_COMMAND in CSBwin.cpp.
+static void HandleMenuCommand(int id)
+{
+   switch(id)
+   {
+      case IDM_Statistics: SendToGame(UIM_Statistics); break;
+      case IDC_ItemsRemaining: SetOption(OPT_ITEMSREMAINING); break;
+      case IDC_NonCSBItemsRemaining: SetOption(OPT_NONCSBITEMSREMAINING); break;
+      case IDM_DMRULES: SetOption(OPT_DMRULES); break;
+      case IDC_Record: SetOption(OPT_RECORD, RecordMenuOption ? 0 : 1); break;
+      case IDC_Playback: SetOption(OPT_PLAYBACK, PlayfileIsOpen() ? 0 : 1); break;
+      case IDC_QuickPlay:
+         if(PlayfileIsOpen())
+            SetOption(OPT_QUICKPLAY, NoSpeedLimit != 0 ? 0 : 1);
+         break;
+      case IDM_Glacial: SetOption(OPT_CLOCK, SPEED_GLACIAL); break;
+      case IDM_Molasses: SetOption(OPT_CLOCK, SPEED_MOLASSES); break;
+      case IDM_VerySlow: SetOption(OPT_CLOCK, SPEED_VERYSLOW); break;
+      case IDM_Slow: SetOption(OPT_CLOCK, SPEED_SLOW); break;
+      case IDM_Normal: SetOption(OPT_CLOCK, SPEED_NORMAL); break;
+      case IDM_Fast: SetOption(OPT_CLOCK, SPEED_FAST); break;
+      case IDM_Quick: SetOption(OPT_CLOCK, SPEED_QUICK); break;
+      case IDM_ExtraTicks: SetOption(OPT_EXTRATICKS); break;
+      case IDM_PlayerClock: SetOption(OPT_PLAYERCLOCK); break;
+      case IDM_VOLUME_FULL: SetOption(OPT_VOLUME, VOLUME_FULL); break;
+      case IDM_VOLUME_HALF: SetOption(OPT_VOLUME, VOLUME_HALF); break;
+      case IDM_VOLUME_QUARTER: SetOption(OPT_VOLUME, VOLUME_QUARTER); break;
+      case IDM_VOLUME_EIGHTH: SetOption(OPT_VOLUME, VOLUME_EIGHTH); break;
+      case IDM_VOLUME_OFF: SetOption(OPT_VOLUME, VOLUME_OFF); break;
+      case ID_4X3ASPECTRATIO: ToggleAspectRatio(); break;
+      case IDM_FULLSCREEN: ToggleFullscreen(); break;
+      case IDM_HELP: UI_MessageBox(helpMessage, "Help", MESSAGE_OK); break;
+   }
+}
+#endif
 
 static void HandleKeyDown(const SDL_KeyboardEvent &key)
 {
@@ -346,6 +427,13 @@ static void HandleKeyDown(const SDL_KeyboardEvent &key)
 
 static void HandleEvent(const SDL_Event &event)
 {
+#ifdef __APPLE__
+   if(event.type == MacMenu_EventType())
+   {
+      HandleMenuCommand(event.user.code);
+      return;
+   }
+#endif
    switch(event.type)
    {
       case SDL_QUIT:
@@ -432,6 +520,9 @@ int main(int argc, char *argv[])
       fprintf(stderr, "Unable to initialize SDL: %s\n", SDL_GetError());
       return 1;
    }
+#ifdef __APPLE__
+   MacMenu_Create();
+#endif
 
    // Like the Windows version, the folder containing the program is the last place searched for files.
    if(char *basePath = SDL_GetBasePath())

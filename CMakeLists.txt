@@ -50,6 +50,12 @@ set(PLATFORM_SOURCES
    sdl/SDLMain.cpp
    sdl/SDLUI.cpp
    sdl/SDLSound.cpp)
+if(APPLE)
+   # The menu bar.  Compiled as CXX: clang sees Objective-C++ from the .mm
+   # extension, and enabling OBJCXX would pass C++ flags to SDL's .m files.
+   set_source_files_properties(sdl/MacMenu.mm PROPERTIES LANGUAGE CXX)
+   list(APPEND PLATFORM_SOURCES sdl/MacMenu.mm)
+endif()
 
 add_executable(CSBwin ${GAME_SOURCES} ${PLATFORM_SOURCES})
 target_include_directories(CSBwin PRIVATE ${CMAKE_SOURCE_DIR})
@@ -59,6 +65,7 @@ target_compile_options(CSBwin PRIVATE
    -Wno-everything)
 target_link_libraries(CSBwin PRIVATE ${SDL_LIBRARY})
 if(APPLE)
+   target_link_libraries(CSBwin PRIVATE "-framework Cocoa")
    # The game keeps #pragma pack(1) structs (inherited from the 68000 original)
    # containing statically initialized pointers at unaligned offsets.  arm64
    # handles unaligned loads fine, but chained fixups require aligned pointers.
