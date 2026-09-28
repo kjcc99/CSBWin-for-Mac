@@ -82,11 +82,19 @@ if(CSBWIN_APP)
    set_target_properties(CSBwin PROPERTIES
       MACOSX_BUNDLE TRUE
       MACOSX_BUNDLE_INFO_PLIST ${CMAKE_SOURCE_DIR}/macos/Info.plist.in)
+   # The app opens with a SwiftUI launcher, which runs the game.
+   # (CMake only compiles Swift with the Ninja and Xcode generators.)
+   set(LAUNCHER ${CMAKE_BINARY_DIR}/CSBwinLauncher)
+   add_custom_command(OUTPUT ${LAUNCHER}
+      COMMAND xcrun swiftc -O -target arm64-apple-macos${CMAKE_OSX_DEPLOYMENT_TARGET}
+              -parse-as-library ${CMAKE_SOURCE_DIR}/macos/Launcher.swift -o ${LAUNCHER}
+      DEPENDS ${CMAKE_SOURCE_DIR}/macos/Launcher.swift)
    # Apple Silicon refuses to run code without at least an ad-hoc signature.
    # Sign on every build, since changed resources are copied without relinking.
-   add_custom_target(sign_app ALL
+   add_custom_target(app ALL
+      COMMAND ${CMAKE_COMMAND} -E copy ${LAUNCHER} $<TARGET_BUNDLE_CONTENT_DIR:CSBwin>/MacOS/
       COMMAND codesign --force --deep --sign - $<TARGET_BUNDLE_DIR:CSBwin>
-      DEPENDS CSBwin)
+      DEPENDS CSBwin ${LAUNCHER})
 else()
    # Like CSBwin.exe on Windows, the program looks for config.txt, hcsb.dat etc.
    # in its own folder, so place a copy next to the game data.

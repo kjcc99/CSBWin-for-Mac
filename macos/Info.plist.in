@@ -5,7 +5,7 @@
 	<key>CFBundleDevelopmentRegion</key>
 	<string>en</string>
 	<key>CFBundleExecutable</key>
-	<string>CSBwin</string>
+	<string>CSBwinLauncher</string>
 	<key>CFBundleIconFile</key>
 	<string>CSBwin</string>
 	<key>CFBundleIdentifier</key>

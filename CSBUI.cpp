@@ -2020,6 +2020,21 @@ bool UI_ProcessOption(char *key, char *value)
       if(csbMessage.p2 != -1)
          CSBUI(&csbMessage);
    }
+   if(strcmp(key, "VOLUME") == 0)
+   {
+      _strupr(value);
+      if(strcmp(value, "FULL") == 0)
+         gameVolume = VOLUME_FULL;
+      if(strcmp(value, "HALF") == 0)
+         gameVolume = VOLUME_HALF;
+      if(strcmp(value, "QUARTER") == 0)
+         gameVolume = VOLUME_QUARTER;
+      if(strcmp(value, "EIGHTH") == 0)
+         gameVolume = VOLUME_EIGHTH;
+      if(strcmp(value, "OFF") == 0)
+         gameVolume = VOLUME_OFF;
+      return true;
+   }
    if(strcmp(key, "PLAY") == 0)
    {
       strcpy(PlayfileName, value);

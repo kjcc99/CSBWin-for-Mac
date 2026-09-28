@@ -407,6 +407,7 @@ static void ProcessCommandLine(int argc, char *argv[])
       {
          printf("%s\n\nUsage: CSBwin [directory=<dir>] [dungeon=<file>] [play=<file>]\n"
                 "              [speed=<glacial|molasses|veryslow|slow|normal|fast|quick>]\n"
+                "              [volume=<full|half|quarter|eighth|off>]\n"
                 "              [size=full] [width=<pixels>] [record] [norecord]\n\n%s\n",
                 szCSBVersion, helpMessage);
          exit(0);
@@ -473,6 +474,7 @@ int main(int argc, char *argv[])
    g_texture = SDL_CreateTexture(g_renderer, SDL_PIXELFORMAT_RGB888, SDL_TEXTUREACCESS_STREAMING,
                                  g_rcAtari.right, g_rcAtari.bottom);
    UpdateClientRect();
+   SDL_RaiseWindow(g_window); // When started by the launcher in CSBwin.app
    if(fullscreenRequested)
       ToggleFullscreen();
 
