@@ -21,6 +21,9 @@ if(NOT CMAKE_BUILD_TYPE)
 endif()
 
 if(CSBWIN_APP)
+   # Keep the builder's folder names (e.g. /Users/<name>) out of the app,
+   # which would otherwise contain them in assert messages and debug info.
+   add_compile_options(-ffile-prefix-map=${CMAKE_SOURCE_DIR}=. -ffile-prefix-map=${CMAKE_BINARY_DIR}=build)
    include(FetchContent)
    set(SDL_SHARED OFF CACHE BOOL "" FORCE)
    set(SDL_STATIC ON CACHE BOOL "" FORCE)
