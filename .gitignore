@@ -282,3 +282,4 @@ docs/
 Game/*/CSBGAME*.DAT
 Game/*/csbgame*.bak
 build-app/
+build-release/
